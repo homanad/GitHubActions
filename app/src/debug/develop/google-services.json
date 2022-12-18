@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "451024233239",
+    "project_id": "githubactions-sample",
+    "storage_bucket": "githubactions-sample.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:451024233239:android:18a528e94bf6a3230d8d52",
+        "android_client_info": {
+          "package_name": "com.homanad.android.sample.githubactions.develop.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "451024233239-1etl502lu87pvdnunht8s4nsruo1g652.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxzN8K_B83BdrNcVO28ewkr7J4Ac7ut7E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "451024233239-1etl502lu87pvdnunht8s4nsruo1g652.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

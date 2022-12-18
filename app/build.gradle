@@ -1,17 +1,18 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
 }
 
 android {
     namespace 'com.homanad.android.sample.githubactions'
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.homanad.android.sample.githubactions"
         minSdk 26
-        targetSdk 32
-        versionCode 1
+        targetSdk 33
+        versionCode 10
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -22,7 +23,22 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+        debug {
+            applicationIdSuffix ".debug"
+        }
     }
+
+    flavorDimensions "environment"
+    productFlavors {
+        develop {
+            applicationIdSuffix ".develop"
+            dimension "environment"
+        }
+        production {
+            dimension "environment"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
