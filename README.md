@@ -211,6 +211,19 @@ for these information. And this time I will also create step to upload productio
     app_file_path: app/build/outputs/apk/production/debug/app-production-debug.apk
 ```
 
+#### Upload artifacts
+The last one, I want to upload our debug builds to workflow artifacts:
+
+```
+- name: Upload artifacts
+  uses: actions/upload-artifact@v3
+  with:
+    name: Debug builds
+    path: |
+      app/build/outputs/apk/develop/debug/app-develop-debug.apk
+      app/build/outputs/apk/production/debug/app-production-debug.apk
+```
+
 ### Let's see how it works
 
 Since I configured this workflow only start when a commit is pushed or a pull_request is merged in

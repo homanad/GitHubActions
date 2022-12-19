@@ -63,3 +63,11 @@ jobs:
           app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
           api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
           app_file_path: app/build/outputs/apk/production/debug/app-production-debug.apk
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Debug builds
+          path: |
+            app/build/outputs/apk/develop/debug/app-develop-debug.apk
+            app/build/outputs/apk/production/debug/app-production-debug.apk
