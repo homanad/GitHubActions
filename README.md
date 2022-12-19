@@ -216,6 +216,20 @@ for these information. And this time I will also create step to upload productio
 Since I configured this workflow only start when a commit is pushed or a pull_request is merged in
 **develop** branch, so I'll create a **develop** branch and push current code.
 
+This is workflow running:
+
+<img src="/attachments/develop_workflow.png" />
+
+And both develop & production debug APKs are uploaded successfully to Firebase App Distribution:
+
+<img src="/attachments/firebase_app_distribution_develop_debug.png" />
+
+<img src="/attachments/firebase_app_distribution_production_debug.png" />
+
+Also, both develop & production debug APKs are uploaded successfully to Firebase App Distribution:
+
+<img src="/attachments/deploy_gate_applications.png" />
+
 ## Conclusion
 
 In short, with GitHub Actions you can do almost thing automatically. Because the GitHub Actions
