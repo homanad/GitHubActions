@@ -17,6 +17,7 @@ on:
   pull_request:
     branches: 
       "branch name"
+  ...
 ```
 
 And then we have **jobs** describing its steps in this workflow:
@@ -211,6 +212,9 @@ for these information. And this time I will also create step to upload productio
 ```
 
 ### Let's see how it works
+
+Since I configured this workflow only start when a commit is pushed or a pull_request is merged in
+**develop** branch, so I'll create a **develop** branch and push current code.
 
 ## Conclusion
 

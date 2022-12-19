@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup JDK environment
-        uses: actions/setup-jave@v1
+        uses: actions/setup-java@v1
         with:
           java-version: 11
 
@@ -53,6 +53,13 @@ jobs:
       - name: Upload develop debug APK to DeployGate
         uses: jmatsu/dg-upload-app-action@v0.2
         with:
-          app_owner_name: ${{ secrets.DEPLOYGATE_OWNER_NAME }}
-          api_token: ${{ secrets.DEPLOYGATE_API_TOKEN }}
+          app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
+          api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
           app_file_path: app/build/outputs/apk/develop/debug/app-develop-debug.apk
+
+      - name: Upload production debug APK to DeployGate
+        uses: jmatsu/dg-upload-app-action@v0.2
+        with:
+          app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
+          api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
+          app_file_path: app/build/outputs/apk/production/debug/app-production-debug.apk
