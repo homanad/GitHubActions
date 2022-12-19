@@ -14,26 +14,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3.2.0
 
       - name: Setup JDK environment
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v3.9.0
         with:
+          distribution: 'temurin'
           java-version: 11
+          cache: 'gradle'
 
       - name: Gradle caching
-        uses: actions/cache@v2
+        uses: actions/cache@v3.0.11
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-key: |
+          restore-keys: |
             ${{ runner.os }}-gradle
 
       - name: Build debug APKs
         run: ./gradlew assembleDebug
 
       - name: Upload develop debug APK to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.4.0
         with:
           appId: ${{ secrets.FIREBASE_DEVELOP_DEBUG_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_DISTRIBUTION_CREDENTIAL_FILE_CONTENT }}
@@ -42,7 +44,7 @@ jobs:
           file: app/build/outputs/apk/develop/debug/app-develop-debug.apk
 
       - name: Upload production debug APK to Firebase App Distribution
-        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.4.0
         with:
           appId: ${{ secrets.FIREBASE_PRODUCTION_DEBUG_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_DISTRIBUTION_CREDENTIAL_FILE_CONTENT }}
@@ -51,21 +53,21 @@ jobs:
           file: app/build/outputs/apk/production/debug/app-production-debug.apk
 
       - name: Upload develop debug APK to DeployGate
-        uses: jmatsu/dg-upload-app-action@v0.2
+        uses: jmatsu/dg-upload-app-action@v0.2.2
         with:
           app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
           api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
           app_file_path: app/build/outputs/apk/develop/debug/app-develop-debug.apk
 
       - name: Upload production debug APK to DeployGate
-        uses: jmatsu/dg-upload-app-action@v0.2
+        uses: jmatsu/dg-upload-app-action@v0.2.2
         with:
           app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
           api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
           app_file_path: app/build/outputs/apk/production/debug/app-production-debug.apk
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: Debug builds
           path: |
