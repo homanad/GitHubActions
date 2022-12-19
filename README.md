@@ -224,6 +224,86 @@ The last one, I want to upload our debug builds to workflow artifacts:
       app/build/outputs/apk/production/debug/app-production-debug.apk
 ```
 
+### The entire file content
+
+```
+name: Build and upload debug APK
+on:
+  push:
+    branches:
+      "develop"
+  pull_request:
+    branches:
+      "develop"
+    types:
+      - closed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.2.0
+
+      - name: Setup JDK environment
+        uses: actions/setup-java@v3.9.0
+        with:
+          distribution: 'temurin'
+          java-version: 11
+          cache: 'gradle'
+
+      - name: Gradle caching
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle
+
+      - name: Build debug APKs
+        run: ./gradlew assembleDebug
+
+      - name: Upload develop debug APK to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.4.0
+        with:
+          appId: ${{ secrets.FIREBASE_DEVELOP_DEBUG_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_DISTRIBUTION_CREDENTIAL_FILE_CONTENT }}
+          groups: testers
+          releaseNotes: ${{ github.event.head_commit.message }}
+          file: app/build/outputs/apk/develop/debug/app-develop-debug.apk
+
+      - name: Upload production debug APK to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.4.0
+        with:
+          appId: ${{ secrets.FIREBASE_PRODUCTION_DEBUG_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_DISTRIBUTION_CREDENTIAL_FILE_CONTENT }}
+          groups: testers
+          releaseNotes: ${{ github.event.head_commit.message }}
+          file: app/build/outputs/apk/production/debug/app-production-debug.apk
+
+      - name: Upload develop debug APK to DeployGate
+        uses: jmatsu/dg-upload-app-action@v0.2.2
+        with:
+          app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
+          api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
+          app_file_path: app/build/outputs/apk/develop/debug/app-develop-debug.apk
+
+      - name: Upload production debug APK to DeployGate
+        uses: jmatsu/dg-upload-app-action@v0.2.2
+        with:
+          app_owner_name: ${{ secrets.DEPLOY_GATE_OWNER_NAME }}
+          api_token: ${{ secrets.DEPLOY_GATE_API_KEY }}
+          app_file_path: app/build/outputs/apk/production/debug/app-production-debug.apk
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: Debug builds
+          path: |
+            app/build/outputs/apk/develop/debug/app-develop-debug.apk
+            app/build/outputs/apk/production/debug/app-production-debug.apk
+```
+
 ### Let's see how it works
 
 Since I configured this workflow only start when a commit is pushed or a pull_request is merged in
@@ -231,9 +311,13 @@ Since I configured this workflow only start when a commit is pushed or a pull_re
 
 This is workflow running:
 
-<img src="/attachments/develop_workflow.png" />
+<img src="/attachments/workflow_develop.png" />
 
-And both develop & production debug APKs are uploaded successfully to Firebase App Distribution:
+And this is our artifacts
+
+<img src="/attachments/workflow_develop.png" />
+
+Both develop & production debug APKs are uploaded successfully to Firebase App Distribution:
 
 <img src="/attachments/firebase_app_distribution_develop_debug.png" />
 
