@@ -48,6 +48,10 @@ android {
     }
 }
 
+task printVersionName {
+    println android.defaultConfig.versionName
+}
+
 dependencies {
 
     implementation 'androidx.core:core-ktx:1.7.0'

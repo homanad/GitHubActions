@@ -212,6 +212,7 @@ for these information. And this time I will also create step to upload productio
 ```
 
 #### Upload artifacts
+
 The last one, I want to upload our debug builds to workflow artifacts:
 
 ```
@@ -326,6 +327,254 @@ Both develop & production debug APKs are uploaded successfully to Firebase App D
 Also, both develop & production debug APKs are uploaded successfully to Firebase App Distribution:
 
 <img src="/attachments/deploy_gate_applications.png" />
+
+## GitHub Actions configuration for production/release
+
+For production release, we have many jobs that need to do, such as: upload to Google Play
+production/internal test/open test, create a git tag and a release,... So many thing!
+
+But in this example, we just go though create a git tag and make a release on GitHub, let's get
+started!
+
+For this workflow, I want it to run when a pull request to "master" branch is merged. So I will
+create another workflow file **master_workflow.yml**
+
+```
+on:
+  pull_request:
+    branches:
+      "master"
+    types:
+      - closed
+```
+
+Here is the config so that this workflow is triggered when a pull request is merged. Next we there
+will still be **Checkout, Setup JDK environment, Gradle caching** steps, so I won't describe it
+here.
+
+After setting up the environment, we will start creating a unsigned production release build.
+
+### Create release build
+
+```
+- name: Create release build
+  run: ./gradlew assembleProductionRelease
+```
+
+### Sign release build
+
+In order for a release apk to be installable on an Android device, the APK needs to be signed, in
+preparation for For this step, you first need to have the keystore file of this project. For this
+example I will create a new keystore.
+
+Next we need to save this keystore as a Github secret, because github secret only accepts string, so
+we have to get the base64 encoded string of the keystore, follow this tutorial to get
+it: https://stefma.medium.com/how-to-store-a-android-keystore-safely-on-github-actions-f0cef9413784
+
+Of course, we will also store **keystore password, key alias and alias password** on the github
+secret.
+
+In total we will have 4 new secrets as follows:
+
+<img src="/attachments/github_secrets_for_release.png" />
+
+and here is the script to sign release APK:
+
+```
+- name: Sign release APK
+  uses: r0adkll/sign-android-release@v1.0.4
+  with:
+    releaseDirectory: app/build/outputs/apk/production/release
+    alias: ${{ secrets.RELEASE_KEY_ALIAS }}
+    signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE }}
+    keyStorePassword: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+    keyPassword: ${{ secrets.RELEASE_KEY_ALIAS_PASSWORD }}
+```
+
+Here I use r0adkll/sign-android-release action, provide the directory path containing the release
+APK and keystore information to sign APK.
+
+Then I will also upload the artifact like the develop workflow:
+
+```
+- name: Upload artifact
+  uses: actions/upload-artifact@v3.1.1
+  with:
+    name: Release artifact
+    path: app/build/outputs/apk/production/release/*.apk
+```
+
+### Create github release
+
+To create a release, I want to get information about the version code and version name of the app to
+set name for your release. So I will write 2 more gradle tasks inside **app/build.gradle**:
+
+```
+task printVersionName {
+    println android.defaultConfig.versionName
+}
+```
+
+Then I used the gradew command to run the task I just created:
+
+```
+- name: Retrieve version name
+  run: |
+    echo "::set-output name=VERSION_NAME::$(${{github.workspace}}/gradlew -q printVersionName)"
+  id: android_version_name
+```
+
+Then save the above information to GITHUB_ENV for later use:
+
+```
+- name: Get version name
+  run: |
+    echo "VERSION_NAME=${{steps.android_version_name.outputs.VERSION_NAME}}" >> $GITHUB_ENV
+```
+
+Now it's time to create the release:
+
+```
+- name: Create release
+  id: create_release
+  uses: actions/create-release@v1.1.4
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    tag_name: tags/${{ env.VERSION_NAME }}
+    release_name: ${{ env.VERSION_NAME }}
+    draft: false
+    prerelease: false
+```
+
+- **secrets.GITHUB_TOKEN** will be provided by the create-release action itself, so you don't need
+  to care about it
+- tag_name & release name: I will use version name as their name
+- draft & prerelease: I won't create a draft and a pre-release, so both are false
+
+### Upload artifacts for the release
+
+I will save the APK path and APK name to GITHUB_ENV:
+
+```
+- name: Save name of our Artifact
+  id: set-result-artifact
+  run: |
+    ARTIFACT_PATHNAME_APK=$(ls app/build/outputs/apk/production/release/*.apk | head -n 1)
+    ARTIFACT_NAME_APK=$(basename $ARTIFACT_PATHNAME_APK)
+    echo "ARTIFACT_NAME_APK is " ${ARTIFACT_NAME_APK}
+    echo "ARTIFACT_PATHNAME_APK=${ARTIFACT_PATHNAME_APK}" >> $GITHUB_ENV
+    echo "ARTIFACT_NAME_APK=${ARTIFACT_NAME_APK}" >> $GITHUB_ENV
+```
+
+Then upload release artifacts:
+
+```
+- name: Upload our Artifact Assets
+  id: upload-release-asset
+  uses: actions/upload-release-asset@v1.0.2
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    upload_url: ${{ steps.create_release.outputs.upload_url }}
+    asset_path: ${{ env.ARTIFACT_PATHNAME_APK }}
+    asset_name: ${{ env.ARTIFACT_NAME_APK }}
+    asset_content_type: application/zip
+```
+
+### The entire file content
+
+```
+name: Build and create release
+on:
+  pull_request:
+    branches:
+      "master"
+    types:
+      - closed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.2.0
+
+      - name: Setup JDK environment
+        uses: actions/setup-java@v3.9.0
+        with:
+          distribution: 'temurin'
+          java-version: 11
+          cache: 'gradle'
+
+      - name: Gradle caching
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle
+
+      - name: Create release build
+        run: ./gradlew assembleProductionRelease
+
+      - name: Sign release APK
+        uses: r0adkll/sign-android-release@v1.0.4
+        with:
+          releaseDirectory: app/build/outputs/apk/production/release
+          alias: ${{ secrets.RELEASE_KEY_ALIAS }}
+          signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE }}
+          keyStorePassword: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.RELEASE_KEY_ALIAS_PASSWORD }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: Release artifact
+          path: app/build/outputs/apk/production/release/*.apk
+
+      - name: Retrieve version name
+        run: |
+          echo "::set-output name=VERSION_NAME::$(${{github.workspace}}/gradlew -q printVersionName)"
+        id: android_version_name
+
+      - name: Get version name
+        run: |
+          echo "VERSION_NAME=${{steps.android_version_name.outputs.VERSION_NAME}}" >> $GITHUB_ENV
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: tags/${{ env.VERSION_NAME }}
+          release_name: ${{ env.VERSION_NAME }}
+          draft: false
+          prerelease: false
+
+      - name: Save name of our Artifact
+        id: set-result-artifact
+        run: |
+          ARTIFACT_PATHNAME_APK=$(ls app/build/outputs/apk/production/release/*.apk | head -n 1)
+          ARTIFACT_NAME_APK=$(basename $ARTIFACT_PATHNAME_APK)
+          echo "ARTIFACT_NAME_APK is " ${ARTIFACT_NAME_APK}
+          echo "ARTIFACT_PATHNAME_APK=${ARTIFACT_PATHNAME_APK}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME_APK=${ARTIFACT_NAME_APK}" >> $GITHUB_ENV
+          
+      - name: Upload our Artifact Assets
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.ARTIFACT_PATHNAME_APK }}
+          asset_name: ${{ env.ARTIFACT_NAME_APK }}
+          asset_content_type: application/zip
+```
+
+### Let's see how it works
 
 ## Conclusion
 
