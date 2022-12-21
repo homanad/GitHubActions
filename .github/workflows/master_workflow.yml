@@ -1,0 +1,87 @@
+name: Build and create release
+on:
+  pull_request:
+    branches:
+      "master"
+    types:
+      - closed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3.2.0
+
+      - name: Setup JDK environment
+        uses: actions/setup-java@v3.9.0
+        with:
+          distribution: 'temurin'
+          java-version: 11
+          cache: 'gradle'
+
+      - name: Gradle caching
+        uses: actions/cache@v3.0.11
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle
+
+      - name: Create release build
+        run: ./gradlew assembleProductionRelease
+
+      - name: Sign release APK
+        uses: r0adkll/sign-android-release@v1.0.4
+        with:
+          releaseDirectory: app/build/outputs/apk/production/release
+          alias: ${{ secrets.RELEASE_KEY_ALIAS }}
+          signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE }}
+          keyStorePassword: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.RELEASE_KEY_ALIAS_PASSWORD }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: Release artifact
+          path: app/build/outputs/apk/production/release/*.apk
+
+      - name: Retrieve version name
+        run: |
+          echo "::set-output name=VERSION_NAME::$(${{github.workspace}}/gradlew -q printVersionName)"
+        id: android_version_name
+
+      - name: Get version name
+        run: |
+          echo "VERSION_NAME=${{steps.android_version_name.outputs.VERSION_NAME}}" >> $GITHUB_ENV
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: tags/${{ env.VERSION_NAME }}
+          release_name: ${{ env.VERSION_NAME }}
+          draft: false
+          prerelease: false
+
+      - name: Save name of our Artifact
+        id: set-result-artifact
+        run: |
+          ARTIFACT_PATHNAME_APK=$(ls app/build/outputs/apk/production/release/*.apk | head -n 1)
+          ARTIFACT_NAME_APK=$(basename $ARTIFACT_PATHNAME_APK)
+          echo "ARTIFACT_NAME_APK is " ${ARTIFACT_NAME_APK}
+          echo "ARTIFACT_PATHNAME_APK=${ARTIFACT_PATHNAME_APK}" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME_APK=${ARTIFACT_NAME_APK}" >> $GITHUB_ENV
+          
+      - name: Upload our Artifact Assets
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.ARTIFACT_PATHNAME_APK }}
+          asset_name: ${{ env.ARTIFACT_NAME_APK }}
+          asset_content_type: application/zip
