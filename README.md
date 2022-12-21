@@ -576,6 +576,18 @@ jobs:
 
 ### Let's see how it works
 
+<img src="/attachments/workflow_master.png" />
+
+Release artifacts were uploaded:
+
+<img src="/attachments/workflow_master_artifact.png" />
+
+Release 1.0.0 was created:
+<img src="/attachments/releases.png" />
+
+tags/1.0.0 was created:
+<img src="/attachments/tags.png" />
+
 ## Conclusion
 
 In short, with GitHub Actions you can do almost thing automatically. Because the GitHub Actions
